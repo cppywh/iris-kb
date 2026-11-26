@@ -65,7 +65,7 @@ button:hover { border-color: var(--accent); color: var(--accent); }
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--bg);
+  background: var(--panel);
   border-right: 1px solid var(--line);
   z-index: 10;
 }

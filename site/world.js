@@ -205,7 +205,7 @@
       this.dpr = dpr;
     }
 
-    fit(padding = 1.44) {
+    fit(padding = 1.2) {
       if (!this.w || !this.h) return;
       let extent = 0;
       for (const n of this.nodes) if (n.r > extent) extent = n.r;
@@ -214,6 +214,7 @@
       const s = Math.min(this.w, this.h) / (extent * 2) / padding;
       this.view = { s: clamp(s, 0.05, 4), tx: this.w / 2, ty: this.h / 2 };
       this._fitted = true;
+      this._extent = extent;
       this._fitW = this.w;
       this._fitH = this.h;
       this.draw();
@@ -717,7 +718,7 @@
 
         const show =
           isRoot ||
-          (node.depth === 1 && s > 0.2 && grow > 0.6) ||
+          (node.depth === 1 && s > 0.1 && grow > 0.6) ||
           (node.depth === 2 && s > 0.6 && grow > 0.9) ||
           (node.depth >= 3 && s > 1.5 && grow > 0.9);
         if (!show) continue;
@@ -761,8 +762,11 @@
         for (let k = 0; k < 22; k++) {
           const step = Math.ceil(k / 2) * 0.05 * (k % 2 ? 1 : -1);
           const aa = node.a + step;
-          const px = Math.cos(aa) * this.w * 0.36;
-          const py = Math.sin(aa) * this.h * 0.38;
+          const treeR = (this._extent || 1000) * s;
+          const rx = Math.min(this.w * 0.44, treeR + 32);
+          const ry = Math.min(this.h * 0.44, treeR + 32);
+          const px = Math.cos(aa) * rx;
+          const py = Math.sin(aa) * ry;
           const align = Math.cos(aa) >= 0 ? 'left' : 'right';
           const off = align === 'left' ? 6 : -6;
           const bx0 = px + off;
@@ -779,9 +783,24 @@
           ctx.lineWidth = 0.7;
           ctx.stroke();
         }
+        const tbox = placed ? placed.box : { x: bx - w / 2, y: by - h / 2, w, h };
+        const padX = 7;
+        const padY = 4;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(tbox.x - padX, tbox.y - padY, tbox.w + padX * 2, tbox.h + padY * 2, 3);
+        } else {
+          ctx.rect(tbox.x - padX, tbox.y - padY, tbox.w + padX * 2, tbox.h + padY * 2);
+        }
+        ctx.fillStyle = dark ? 'rgba(2,4,9,.88)' : 'rgba(250,249,246,.9)';
+        ctx.fill();
+
         ctx.textAlign = placed ? placed.align : 'center';
+        ctx.fillStyle = active
+          ? dark ? `rgba(232,246,252,.98)` : `rgba(34,44,48,.96)`
+          : dark ? 'rgba(130,150,165,.4)' : 'rgba(132,128,116,.5)';
         ctx.fillText(label, bx, by);
-        taken.push(placed ? placed.box : { x: bx - w / 2, y: by - h / 2, w, h });
+        taken.push({ x: tbox.x - padX, y: tbox.y - padY, w: tbox.w + padX * 2, h: tbox.h + padY * 2 });
         order++;
       }
 
