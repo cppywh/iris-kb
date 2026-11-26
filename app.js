@@ -427,9 +427,14 @@
     world.load(treeData, state.cards);
 
     const zoom = parseFloat(params.get('zoom'));
-    if (zoom > 0.05 && zoom < 14) {
+    const focus = params.get('focus');
+    if ((zoom > 0.05 && zoom < 14) || focus) {
       world._zoomLocked = true;
-      world.view.s = zoom;
+      const z = zoom > 0.05 && zoom < 14 ? zoom : world.view.s;
+      const node = focus ? world.byPath.get(focus) : null;
+      world.view.s = z;
+      world.view.tx = world.w / 2 - (node ? node.x : 0) * z;
+      world.view.ty = world.h / 2 - (node ? node.y : 0) * z;
       world.draw();
     }
 

@@ -755,46 +755,45 @@
 
         if (node.depth > 1) {
           const ty = sy - rb - size * 0.95;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(sx - w / 2 - 3, ty - h * 0.62, w + 6, h * 1.05, 2);
+          else ctx.rect(sx - w / 2 - 3, ty - h * 0.62, w + 6, h * 1.05);
+          ctx.fillStyle = dark ? 'rgba(4,8,14,.5)' : 'rgba(250,249,246,.66)';
+          ctx.fill();
+          ctx.fillStyle = active
+            ? dark ? `rgba(226,244,252,${0.94 - node.depth * 0.05})` : `rgba(38,48,52,${0.92 - node.depth * 0.05})`
+            : dark ? 'rgba(130,150,165,.28)' : 'rgba(132,128,116,.35)';
           ctx.fillText(label, sx, ty);
           taken.push({ x: sx - w / 2, y: ty - h / 2, w, h });
           continue;
         }
 
-        // 一级域：节点旁常驻小标签；缩到很小时再补外圈环
+        // 一级域：放大时标在节点正上方，缩小时交给外圈环
         if (s >= 0.34) {
-          const nSize = 10;
-          ctx.font = `500 ${nSize}px Georgia, "Noto Serif CJK SC", serif`;
           const name = node.title || node.name;
+          const nSize = 11;
+          ctx.font = `500 ${nSize}px Georgia, "Noto Serif CJK SC", serif`;
           const nw = ctx.measureText(name).width;
+          const nx = sx;
+          const ny = sy - rb - nSize * 1.15;
           const nh = nSize * 1.45;
 
-          let nx = sx + Math.cos(node.a) * (rb + 12);
-          let ny = sy + Math.sin(node.a) * (rb + 12);
-          let nbox = { x: nx - nw / 2 - 4, y: ny - nh / 2 - 2, w: nw + 8, h: nh + 4 };
-
-          // 窄扇区里沿切向错开
-          for (let k = 0; k < 10 && hits(nbox); k++) {
-            const step = Math.ceil(k / 2) * 0.06 * (k % 2 ? 1 : -1);
-            const aa = node.a + step;
-            nx = sx + Math.cos(aa) * (rb + 12);
-            ny = sy + Math.sin(aa) * (rb + 12);
-            nbox = { x: nx - nw / 2 - 4, y: ny - nh / 2 - 2, w: nw + 8, h: nh + 4 };
-          }
-
           ctx.beginPath();
-          if (ctx.roundRect) ctx.roundRect(nbox.x, nbox.y, nbox.w, nbox.h, 2);
-          else ctx.rect(nbox.x, nbox.y, nbox.w, nbox.h);
-          ctx.fillStyle = dark ? 'rgba(4,8,14,.58)' : 'rgba(250,249,246,.8)';
+          if (ctx.roundRect) ctx.roundRect(nx - nw / 2 - 5, ny - nh / 2, nw + 10, nh, 2);
+          else ctx.rect(nx - nw / 2 - 5, ny - nh / 2, nw + 10, nh);
+          ctx.fillStyle = dark ? 'rgba(4,8,14,.7)' : 'rgba(250,249,246,.86)';
           ctx.fill();
+          ctx.strokeStyle = dark ? 'rgba(126,200,232,.16)' : 'rgba(66,103,121,.14)';
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
 
           ctx.textAlign = 'center';
           ctx.fillStyle = dark
-            ? `rgba(232,246,252,${active ? 0.96 : 0.4})`
-            : `rgba(34,44,48,${active ? 0.94 : 0.45})`;
+            ? `rgba(236,248,253,${active ? 0.98 : 0.42})`
+            : `rgba(30,40,44,${active ? 0.96 : 0.46})`;
           ctx.fillText(name, nx, ny);
-          taken.push(nbox);
+          taken.push({ x: nx - nw / 2 - 5, y: ny - nh / 2, w: nw + 10, h: nh });
 
-          // 放大后节点标签已经够用，不再重复外圈
           order++;
           continue;
         }
