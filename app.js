@@ -425,6 +425,14 @@
       },
     });
     world.load(treeData, state.cards);
+
+    const zoom = parseFloat(params.get('zoom'));
+    if (zoom > 0.05 && zoom < 14) {
+      world._zoomLocked = true;
+      world.view.s = zoom;
+      world.draw();
+    }
+
     if (params.get('debug') === '1') {
       document.title = `w=${world.w} h=${world.h} s=${world.view.s.toFixed(3)} tx=${world.view.tx.toFixed(0)} ty=${world.view.ty.toFixed(0)} cards=${world.cards.length}`;
     }

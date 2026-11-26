@@ -126,6 +126,8 @@
       this._placeCards();
       this._buildGrid();
       this.fit();
+      // 布局稳定后再纠一次，首次 rect 往往偏小
+      requestAnimationFrame(() => this.fit());
       if (this.opts.still) {
         this.grow = 1;
         this.draw();
@@ -207,13 +209,12 @@
 
     fit(padding = 1.2) {
       if (!this.w || !this.h) return;
+      if (this._zoomLocked) return;
       let extent = 0;
       for (const n of this.nodes) if (n.r > extent) extent = n.r;
       for (const c of this.cards) if (c.r > extent) extent = c.r;
       extent += 70;
-      let s = Math.min(this.w, this.h) / (extent * 2) / padding;
-      const half = Math.min(this.w, this.h) / 2;
-      while (extent * s + 96 > half && s > 0.05) s *= 0.97;
+      const s = (Math.min(this.w, this.h) * 0.36) / extent;
       this.view = { s: clamp(s, 0.05, 4), tx: this.w / 2, ty: this.h / 2 };
       this._fitted = true;
       this._extent = extent;
@@ -759,12 +760,51 @@
           continue;
         }
 
-        // 一级域：环绕画布边缘标注，向内对齐，沿切向错开
+        // 一级域：节点旁常驻小标签；缩到很小时再补外圈环
+        if (s >= 0.34) {
+          const nSize = 10;
+          ctx.font = `500 ${nSize}px Georgia, "Noto Serif CJK SC", serif`;
+          const name = node.title || node.name;
+          const nw = ctx.measureText(name).width;
+          const nh = nSize * 1.45;
+
+          let nx = sx + Math.cos(node.a) * (rb + 12);
+          let ny = sy + Math.sin(node.a) * (rb + 12);
+          let nbox = { x: nx - nw / 2 - 4, y: ny - nh / 2 - 2, w: nw + 8, h: nh + 4 };
+
+          // 窄扇区里沿切向错开
+          for (let k = 0; k < 10 && hits(nbox); k++) {
+            const step = Math.ceil(k / 2) * 0.06 * (k % 2 ? 1 : -1);
+            const aa = node.a + step;
+            nx = sx + Math.cos(aa) * (rb + 12);
+            ny = sy + Math.sin(aa) * (rb + 12);
+            nbox = { x: nx - nw / 2 - 4, y: ny - nh / 2 - 2, w: nw + 8, h: nh + 4 };
+          }
+
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(nbox.x, nbox.y, nbox.w, nbox.h, 2);
+          else ctx.rect(nbox.x, nbox.y, nbox.w, nbox.h);
+          ctx.fillStyle = dark ? 'rgba(4,8,14,.58)' : 'rgba(250,249,246,.8)';
+          ctx.fill();
+
+          ctx.textAlign = 'center';
+          ctx.fillStyle = dark
+            ? `rgba(232,246,252,${active ? 0.96 : 0.4})`
+            : `rgba(34,44,48,${active ? 0.94 : 0.45})`;
+          ctx.fillText(name, nx, ny);
+          taken.push(nbox);
+
+          // 放大后节点标签已经够用，不再重复外圈
+          order++;
+          continue;
+        }
+
+        // 缩小态：环绕画布边缘标注，向内对齐，沿切向错开
         let placed = null;
         for (let k = 0; k < 22; k++) {
           const step = Math.ceil(k / 2) * 0.05 * (k % 2 ? 1 : -1);
           const aa = node.a + step;
-          const treeR = (this._extent || 1000) * s;
+          const treeR = Math.min(this.w, this.h) * 0.36;
           const rx = treeR + 34;
           const ry = treeR + 34;
           const px = Math.cos(aa) * rx;
