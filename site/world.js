@@ -195,6 +195,7 @@
       const dpr = window.devicePixelRatio || 1;
       const rect = this.canvas.parentElement.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
+      if (this.w === rect.width && this.h === rect.height) return;
       this.w = rect.width;
       this.h = rect.height;
       this.canvas.width = Math.round(rect.width * dpr);

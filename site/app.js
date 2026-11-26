@@ -332,7 +332,12 @@
       const res = await fetch(card.url, { cache: 'no-store' });
       if (!res.ok) throw Error(`HTTP ${res.status}`);
       article.innerHTML = renderMarkdown(stripFrontmatter(await res.text()));
-      reader.querySelector('.reader-scroll').scrollTop = 0;
+      const scroller = reader.querySelector('.reader-scroll');
+      scroller.scrollTop = 0;
+      scroller.focus({ preventScroll: true });
+      if (new URLSearchParams(location.search).get('debug') === '1') {
+        document.title = `scroll sh=${scroller.scrollHeight} ch=${scroller.clientHeight} reader=${reader.clientHeight} overflow=${getComputedStyle(scroller).overflowY}`;
+      }
     } catch (err) {
       article.innerHTML = `<p class="error">正文读取失败：${esc(err.message)}</p>`;
     }
@@ -439,6 +444,25 @@
   });
 
   document.addEventListener('keydown', (e) => {
+    const scroller = document.querySelector('.reader-scroll');
+    const reading = !$('reader').hidden && scroller;
+    if (reading && !e.target.closest('input, textarea')) {
+      if (e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        scroller.scrollBy({ top: scroller.clientHeight * 0.85, behavior: 'smooth' });
+        return;
+      }
+      if (e.key === 'PageUp') {
+        e.preventDefault();
+        scroller.scrollBy({ top: -scroller.clientHeight * 0.85, behavior: 'smooth' });
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        scroller.scrollBy({ top: e.key === 'ArrowDown' ? 64 : -64, behavior: 'smooth' });
+        return;
+      }
+    }
     if (e.key === 'Escape') closeReader();
     if (e.key === '/' && document.activeElement !== $('q')) { e.preventDefault(); $('q').focus(); }
   });
