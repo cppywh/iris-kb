@@ -722,8 +722,8 @@
         const show =
           isRoot ||
           (node.depth === 1 && s > 0.1 && grow > 0.6) ||
-          (node.depth === 2 && s > 0.6 && grow > 0.9) ||
-          (node.depth >= 3 && s > 1.5 && grow > 0.9);
+          (node.depth === 2 && s > 0.85 && grow > 0.9) ||
+          (node.depth >= 3 && s > 1.6 && grow > 0.9);
         if (!show) continue;
 
         const sx = node.x * grow * s;
@@ -769,7 +769,7 @@
         }
 
         // 一级域：放大时标在节点正上方，缩小时交给外圈环
-        if (s >= 0.34) {
+        if (s >= 0.6) {
           const name = node.title || node.name;
           const nSize = 11;
           ctx.font = `500 ${nSize}px Georgia, "Noto Serif CJK SC", serif`;
@@ -803,16 +803,22 @@
         for (let k = 0; k < 22; k++) {
           const step = Math.ceil(k / 2) * 0.05 * (k % 2 ? 1 : -1);
           const aa = node.a + step;
-          const treeR = Math.min(this.w, this.h) * 0.36;
-          const rx = treeR + 34;
-          const ry = treeR + 34;
+          const treeR = (this._extent || 1000) * s;
+          const rx = Math.min(treeR + 34, this.w * 0.43);
+          const ry = Math.min(treeR + 34, this.h * 0.43);
           const px = Math.cos(aa) * rx;
           const py = Math.sin(aa) * ry;
           const align = Math.cos(aa) >= 0 ? 'left' : 'right';
           const off = align === 'left' ? 6 : -6;
-          const bx0 = px + off;
-          const box = { x: align === 'left' ? bx0 : bx0 - w, y: py - h / 2, w, h };
-          if (!hits(box)) { placed = { px: bx0, py, align, box }; break; }
+          const halfW = this.view.tx;
+          const halfH = this.view.ty;
+          let bx0 = px + off;
+          let by0 = py;
+          if (align === 'left') bx0 = Math.min(bx0, halfW - w - 10);
+          else bx0 = Math.max(bx0, w - halfW + 10);
+          by0 = Math.max(h / 2 - halfH + 8, Math.min(by0, halfH - h / 2 - 8));
+          const box = { x: align === 'left' ? bx0 : bx0 - w, y: by0 - h / 2, w, h };
+          if (!hits(box)) { placed = { px: bx0, py: by0, align, box }; break; }
         }
         const bx = placed ? placed.px : sx;
         const by = placed ? placed.py : sy - rb - size;
