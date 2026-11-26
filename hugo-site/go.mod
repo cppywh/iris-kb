@@ -1,4 +1,4 @@
-module vuln-masterhub-site
+module iris-site
 
 go 1.23.0
 

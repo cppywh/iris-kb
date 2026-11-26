@@ -2,6 +2,6 @@
 title: 关于我
 ---
 
-博主：**godownio**。山水为竭，冬雷震震。
+Iris。关注逆向工程、车联网安全与 AI 安全。
 
-主要关注 Java、Go、内网与域渗透。本网站以安全知识库为主，个人文章见 [Godown_blog](https://godownio.github.io/)，代码见 [GitHub](https://github.com/godownio)。
+这里是我的私人安全知识库：目录树是骨架，场景卡片是最小单位，检索优先面向 AI 读者。

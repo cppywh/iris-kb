@@ -5,7 +5,7 @@
   message(reasons[new URL(location.href).searchParams.get('login')]||'');
   $('console-login-button').onclick=()=>account.login();
   $('mcp-endpoint').textContent=state.mcp_url||location.origin+'/mcp';
-  $('mcp-config').textContent=JSON.stringify({mcpServers:{'godown-knowledge':{url:state.mcp_url||location.origin+'/mcp',headers:{Authorization:'Bearer YOUR_API_KEY'}}}},null,2);
+  $('mcp-config').textContent=JSON.stringify({mcpServers:{'iris-knowledge':{url:state.mcp_url||location.origin+'/mcp',headers:{Authorization:'Bearer YOUR_API_KEY'}}}},null,2);
   fetch('/api/search/status').then(r=>r.json()).then(index=>{$('vector-status').textContent=index.ready?`向量索引：${index.cards} 张卡片 / ${index.chunks} 个分块，模型 ${index.model}`:'向量索引尚未就绪，当前会回退到关键词检索。';}).catch(()=>{$('vector-status').textContent='暂时无法读取索引状态。';});
   if(!state.user)return;
   $('console-login').hidden=true;$('console-authenticated').hidden=false;

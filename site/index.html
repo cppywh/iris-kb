@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iris 安全知识库</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">I</span>
+      <div>
+        <h1>Iris 安全知识库</h1>
+        <p id="stat-line">正在加载索引…</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="theme-toggle" type="button" title="切换主题">主题</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="searchbox">
+        <input id="q" type="search" placeholder="标题 / 别名 / 标签 / CVE" autocomplete="off" spellcheck="false">
+        <button id="clear" type="button" title="清空">×</button>
+      </div>
+
+      <div class="filters">
+        <label class="field">
+          <span>域</span>
+          <select id="domain"><option value="">全部</option></select>
+        </label>
+        <label class="field">
+          <span>状态</span>
+          <select id="status">
+            <option value="">全部</option>
+            <option value="verified">verified</option>
+            <option value="draft">draft</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>置信</span>
+          <select id="confidence">
+            <option value="">全部</option>
+            <option value="high">high</option>
+            <option value="medium">medium</option>
+            <option value="low">low</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="result-head">
+        <span id="result-count">—</span>
+        <button id="random" type="button">随机一张</button>
+      </div>
+      <ol id="results" class="results"></ol>
+    </aside>
+
+    <main class="reader" id="reader">
+      <div class="empty">
+        <h2>选择一张卡片</h2>
+        <p>左侧搜索或筛选。卡片按单一场景组织，共七段：结论、原理、触发条件、利用步骤、PoC、变体与关联、检测与防御。</p>
+        <p class="hint">仅用于授权测试、教学与比赛。</p>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
