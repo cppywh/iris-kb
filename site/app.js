@@ -7,7 +7,7 @@
     query: '',
     scope: '',
     activeId: null,
-    theme: localStorage.getItem('iris.theme') || 'light',
+    theme: localStorage.getItem('iris.theme') || 'dark',
   };
 
   const $ = (id) => document.getElementById(id);

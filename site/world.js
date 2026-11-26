@@ -12,21 +12,21 @@
   const CARD_JITTER = 44;
   const PAD_RATIO = 0.06;
 
-  // 墨色调：全部低饱和，浅色下压在纸面上，深色下提亮
+  // 星尘色：深色下高饱和发光，浅色下压成墨
   const DOMAIN_INK = {
-    web: [62, 100, 118],
-    pentest: [158, 105, 74],
-    ctf: [112, 98, 136],
-    'code-analysis': [82, 106, 116],
-    binary: [70, 94, 118],
-    'ai-security': [114, 102, 134],
-    defense: [88, 116, 98],
-    crypto: [142, 122, 80],
-    cloud: [74, 110, 124],
-    mobile: [142, 94, 94],
-    iot: [94, 120, 106],
-    tools: [104, 104, 108],
-    blockchain: [132, 104, 80],
+    web: [104, 186, 226],
+    pentest: [236, 150, 96],
+    ctf: [176, 146, 238],
+    'code-analysis': [124, 184, 206],
+    binary: [104, 156, 224],
+    'ai-security': [184, 158, 238],
+    defense: [116, 204, 166],
+    crypto: [232, 196, 112],
+    cloud: [114, 196, 222],
+    mobile: [232, 138, 146],
+    iot: [134, 210, 176],
+    tools: [166, 176, 196],
+    blockchain: [216, 172, 122],
   };
 
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -41,9 +41,9 @@
   }
 
   function inkOf(domain, dark) {
-    const base = DOMAIN_INK[domain] || [110, 112, 116];
-    if (!dark) return base;
-    return base.map((v) => clamp(Math.round(v * 1.35 + 58), 0, 255));
+    const base = DOMAIN_INK[domain] || [150, 168, 190];
+    if (dark) return base;
+    return base.map((v) => clamp(Math.round(v * 0.4 + 16), 0, 255));
   }
 
   class WorldTree {
@@ -205,7 +205,7 @@
       this.dpr = dpr;
     }
 
-    fit(padding = 1.03) {
+    fit(padding = 1.44) {
       if (!this.w || !this.h) return;
       let extent = 0;
       for (const n of this.nodes) if (n.r > extent) extent = n.r;
@@ -279,7 +279,9 @@
       }, { passive: false });
 
       el.addEventListener('pointerdown', (e) => {
-        el.setPointerCapture(e.pointerId);
+        // 上一次 pointerup 若丢失，残留指针会让后续全部走双指分支
+        if (this.pointers.size >= 1 && !this.dragging) this.pointers.clear();
+        try { el.setPointerCapture(e.pointerId); } catch {}
         this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         this.dragging = true;
         this.moved = 0;
@@ -291,7 +293,7 @@
         const px = e.clientX - rect.left;
         const py = e.clientY - rect.top;
 
-        if (this.pointers.size === 1 && this.dragging) {
+        if (this.pointers.size === 1) {
           const prev = this.pointers.get(e.pointerId);
           const dx = e.clientX - prev.x;
           const dy = e.clientY - prev.y;
@@ -338,6 +340,13 @@
       };
       el.addEventListener('pointerup', end);
       el.addEventListener('pointercancel', end);
+      el.addEventListener('lostpointercapture', (e) => {
+        this.pointers.delete(e.pointerId);
+        if (!this.pointers.size) {
+          this.dragging = false;
+          el.classList.remove('is-grabbing');
+        }
+      });
       el.addEventListener('pointerleave', () => {
         if (this.hover) { this.hover = null; this._hoverKey = null; this.draw(); }
       });
@@ -409,30 +418,52 @@
       const ctx = this.ctx;
       const cx = this.view.tx;
       const cy = this.view.ty;
-      const r = Math.max(this.w, this.h) * 0.8;
+      const r = Math.max(this.w, this.h) * 0.85;
 
-      ctx.fillStyle = dark ? '#101416' : '#faf9f6';
-      ctx.fillRect(0, 0, this.w, this.h);
-
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      if (dark) {
-        g.addColorStop(0, 'rgba(46,72,84,.34)');
-        g.addColorStop(0.55, 'rgba(20,28,32,.16)');
-        g.addColorStop(1, 'rgba(8,10,12,0)');
-      } else {
+      if (!dark) {
+        ctx.fillStyle = '#faf9f6';
+        ctx.fillRect(0, 0, this.w, this.h);
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
         g.addColorStop(0, 'rgba(255,253,244,.95)');
         g.addColorStop(0.5, 'rgba(246,242,230,.55)');
         g.addColorStop(1, 'rgba(236,232,220,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, this.w, this.h);
+        return;
       }
+
+      ctx.fillStyle = '#04060b';
+      ctx.fillRect(0, 0, this.w, this.h);
+
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, 'rgba(30,58,90,.92)');
+      g.addColorStop(0.32, 'rgba(12,24,40,.96)');
+      g.addColorStop(1, 'rgba(2,4,8,1)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, this.w, this.h);
+
+      // 固定屏幕的远景星点
+      if (!this._stars) {
+        this._stars = Array.from({ length: 240 }, () => ({
+          x: Math.random(),
+          y: Math.random(),
+          r: 0.4 + Math.random() * 1.1,
+          a: 0.12 + Math.random() * 0.5,
+        }));
+      }
+      for (const st of this._stars) {
+        ctx.beginPath();
+        ctx.arc(st.x * this.w, st.y * this.h, st.r, 0, TAU);
+        ctx.fillStyle = `rgba(198, 222, 255, ${st.a})`;
+        ctx.fill();
+      }
     }
 
     _drawGraticule(dark) {
       const ctx = this.ctx;
       const s = this.view.s;
       const fade = this.grow;
-      const line = dark ? 'rgba(130,160,170,.13)' : 'rgba(66,103,121,.13)';
+      const line = dark ? 'rgba(112,178,214,.14)' : 'rgba(66,103,121,.13)';
 
       ctx.lineWidth = 1 / s;
       ctx.setLineDash([2 / s, 7 / s]);
@@ -460,9 +491,6 @@
       ctx.globalAlpha = fade;
       ctx.stroke();
       ctx.globalAlpha = 1;
-
-      ctx.restore();
-      ctx.globalAlpha = 1;
     }
 
     _drawDensity(dark) {
@@ -483,7 +511,7 @@
         ctx.arc(0, 0, rr, a0, a1);
         ctx.arc(0, 0, rr + w, a1, a0, true);
         ctx.closePath();
-        ctx.fillStyle = `rgba(${rgb.join(',')},${dark ? 0.12 : 0.1})`;
+        ctx.fillStyle = `rgba(${rgb.join(',')},${dark ? 0.2 : 0.1})`;
         ctx.globalAlpha = fade;
         ctx.fill();
       }
@@ -514,13 +542,13 @@
         const mx = Math.cos(node.a) * midR;
         const my = Math.sin(node.a) * midR;
 
-        const baseW = clamp(4.8 - node.depth * 0.8, 1.0, 4.8);
+        const baseW = clamp(3.4 - node.depth * 0.55, 0.7, 3.4) / Math.max(0.52, s);
 
         // 底影：稍宽一点、极淡，制造压痕
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
         ctx.quadraticCurveTo(mx, my, ex, ey);
-        ctx.strokeStyle = dark ? 'rgba(0,0,0,.28)' : 'rgba(120,112,92,.10)';
+        ctx.strokeStyle = dark ? 'rgba(0,0,0,.45)' : 'rgba(120,112,92,.10)';
         ctx.lineWidth = baseW + 1.6 / s;
         ctx.stroke();
 
@@ -529,12 +557,17 @@
         ctx.moveTo(p.x, p.y);
         ctx.quadraticCurveTo(mx, my, ex, ey);
         ctx.strokeStyle = hovered
-          ? dark ? 'rgba(226,240,244,.96)' : 'rgba(38,66,78,.96)'
+          ? 'rgba(255,240,214,.98)'
           : active
-            ? dark ? `rgba(160,198,208,${0.7 - node.depth * 0.07})` : `rgba(58,94,112,${0.78 - node.depth * 0.07})`
-            : dark ? 'rgba(110,130,140,.14)' : 'rgba(120,116,104,.16)';
+            ? dark ? `rgba(134,206,238,${0.86 - node.depth * 0.09})` : `rgba(58,94,112,${0.78 - node.depth * 0.07})`
+            : dark ? 'rgba(90,130,160,.14)' : 'rgba(120,116,104,.16)';
+        if (dark && active && node.depth <= 2) {
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = 'rgba(96,186,226,.55)';
+        }
         ctx.lineWidth = baseW;
         ctx.stroke();
+        ctx.shadowBlur = 0;
       }
     }
 
@@ -544,7 +577,7 @@
       const fade = clamp((this.grow - 0.55) / 0.45, 0, 1);
       if (fade <= 0 || s < 0.14) return;
 
-      const radius = clamp(1.15 + s * 1.55, 0.95, 3.9);
+      const radius = clamp(1.3 + s * 1.7, 1.0, 4.2);
       const groups = new Map();
 
       for (const c of this.cards) {
@@ -564,8 +597,8 @@
         const domain = key.replace('|d', '');
         const rgb = inkOf(domain, dark);
         ctx.fillStyle = dark
-          ? `rgba(${rgb.join(',')},${dim ? 0.08 : 0.8})`
-          : `rgba(${rgb.join(',')},${dim ? 0.1 : 0.74})`;
+          ? `rgba(${rgb.join(',')},${dim ? 0.1 : 0.92})`
+          : `rgba(${rgb.join(',')},${dim ? 0.1 : 0.7})`;
         ctx.globalAlpha = fade;
 
         for (let i = 0; i < list.length; i += batch * stride) {
@@ -593,10 +626,11 @@
       }
     }
 
-    _nodeRadius(node) {
-      if (node.depth === 0) return 13;
-      if (node.depth === 1) return clamp(4.2 + Math.sqrt(node.count) * 0.22, 5, 13);
-      return clamp(4.7 - node.depth * 0.55, 2.3, 4.7);
+    _nodeRadius(node, s = this.view.s) {
+      const k = Math.max(0.52, s);
+      if (node.depth === 0) return 9 / k;
+      if (node.depth === 1) return clamp(4 + Math.sqrt(node.count) * 0.07, 3.6, 7.5) / k;
+      return clamp(3.4 - node.depth * 0.45, 1.7, 3.4) / k;
     }
 
     _drawNodes(dark) {
@@ -623,29 +657,34 @@
           // 中心：三圈同心细环 + 实心点
           ctx.beginPath();
           ctx.arc(nx, ny, base * 2.9, 0, TAU);
-          ctx.strokeStyle = dark ? 'rgba(160,190,198,.22)' : 'rgba(66,103,121,.22)';
+          ctx.strokeStyle = dark ? 'rgba(148,214,244,.3)' : 'rgba(66,103,121,.22)';
           ctx.lineWidth = 1 / s;
           ctx.stroke();
 
           ctx.beginPath();
           ctx.arc(nx, ny, base * 1.9, 0, TAU);
-          ctx.strokeStyle = dark ? 'rgba(160,190,198,.34)' : 'rgba(66,103,121,.32)';
+          ctx.strokeStyle = dark ? 'rgba(148,214,244,.45)' : 'rgba(66,103,121,.32)';
           ctx.stroke();
 
           ctx.beginPath();
           ctx.arc(nx, ny, base * 0.62, 0, TAU);
-          ctx.fillStyle = dark ? 'rgba(240,226,200,.95)' : 'rgba(48,59,64,.9)';
+          ctx.fillStyle = dark ? 'rgba(255,250,236,.98)' : 'rgba(48,59,64,.9)';
           ctx.fill();
         } else {
           const rgb = inkOf(node.path.split('/')[0], dark);
           ctx.beginPath();
           ctx.arc(nx, ny, base, 0, TAU);
           ctx.fillStyle = isHover
-            ? dark ? '#f2e3c8' : '#a66f51'
+            ? '#ffe9c4'
             : active
-              ? `rgba(${rgb.join(',')},${dark ? 0.95 : 0.88})`
-              : dark ? 'rgba(120,130,134,.22)' : 'rgba(130,126,114,.26)';
+              ? `rgba(${rgb.join(',')},${dark ? 1 : 0.88})`
+              : dark ? 'rgba(120,130,134,.2)' : 'rgba(130,126,114,.26)';
+          if (dark && active) {
+            ctx.shadowBlur = isHover ? 26 : 18;
+            ctx.shadowColor = `rgba(${rgb.join(',')},.9)`;
+          }
           ctx.fill();
+          ctx.shadowBlur = 0;
 
           // 一级域：容量弧环
           if (node.depth === 1 && active) {
@@ -698,8 +737,8 @@
         ctx.fillStyle = isRoot
           ? dark ? 'rgba(238,228,204,.96)' : 'rgba(48,59,64,.94)'
           : active
-            ? dark ? `rgba(214,228,232,${0.95 - node.depth * 0.06})` : `rgba(38,48,52,${0.95 - node.depth * 0.06})`
-            : dark ? 'rgba(140,150,152,.22)' : 'rgba(132,128,116,.3)';
+            ? dark ? `rgba(226,244,252,${0.96 - node.depth * 0.06})` : `rgba(38,48,52,${0.95 - node.depth * 0.06})`
+            : dark ? 'rgba(130,150,165,.2)' : 'rgba(132,128,116,.3)';
 
         const w = ctx.measureText(label).width;
         const h = size * 1.5;
@@ -717,30 +756,32 @@
           continue;
         }
 
-        // 一级域：贴在节点外侧，沿切向错开，不画长引线
-        const lblR = (node.r + 20) * grow;
+        // 一级域：环绕画布边缘标注，向内对齐，沿切向错开
         let placed = null;
-        for (let k = 0; k < 20; k++) {
-          const step = Math.ceil(k / 2) * 0.055 * (k % 2 ? 1 : -1);
+        for (let k = 0; k < 22; k++) {
+          const step = Math.ceil(k / 2) * 0.05 * (k % 2 ? 1 : -1);
           const aa = node.a + step;
-          const px = Math.cos(aa) * lblR;
-          const py = Math.sin(aa) * lblR;
-          const box = { x: px - w / 2, y: py - h / 2, w, h };
-          if (!hits(box)) { placed = { px, py, box }; break; }
+          const px = Math.cos(aa) * this.w * 0.36;
+          const py = Math.sin(aa) * this.h * 0.38;
+          const align = Math.cos(aa) >= 0 ? 'left' : 'right';
+          const off = align === 'left' ? 6 : -6;
+          const bx0 = px + off;
+          const box = { x: align === 'left' ? bx0 : bx0 - w, y: py - h / 2, w, h };
+          if (!hits(box)) { placed = { px: bx0, py, align, box }; break; }
         }
         const bx = placed ? placed.px : sx;
         const by = placed ? placed.py : sy - rb - size;
-        if (placed && Math.hypot(bx - sx, by - sy) > rb + size * 1.4) {
+        if (placed) {
           ctx.beginPath();
           ctx.moveTo(sx, sy);
           ctx.lineTo(bx, by);
-          ctx.strokeStyle = dark ? 'rgba(130,160,170,.28)' : 'rgba(66,103,121,.24)';
+          ctx.strokeStyle = dark ? 'rgba(120,190,225,.3)' : 'rgba(66,103,121,.22)';
           ctx.lineWidth = 0.7;
           ctx.stroke();
         }
-        ctx.textAlign = 'center';
+        ctx.textAlign = placed ? placed.align : 'center';
         ctx.fillText(label, bx, by);
-        taken.push({ x: bx - w / 2, y: by - h / 2, w, h });
+        taken.push(placed ? placed.box : { x: bx - w / 2, y: by - h / 2, w, h });
         order++;
       }
 

@@ -14,16 +14,16 @@
 }
 
 html[data-theme="dark"] {
-  --bg: #080b0e;
-  --panel: #0e1418;
-  --soft: #141d22;
-  --line: #22303a;
-  --text: #e2ebee;
-  --muted: #8ba0a8;
-  --accent: #8fb3bf;
-  --accent-soft: #16242b;
-  --warn: #c98d68;
-  --code-bg: #121b20;
+  --bg: #04060b;
+  --panel: #080d14;
+  --soft: #0d151e;
+  --line: #1a2834;
+  --text: #dce9f2;
+  --muted: #7d94a6;
+  --accent: #7ec8e8;
+  --accent-soft: #0e2130;
+  --warn: #e8a86a;
+  --code-bg: #0a1118;
 }
 
 * { box-sizing: border-box; }
@@ -290,7 +290,7 @@ button:hover { border-color: var(--accent); color: var(--accent); }
   overflow: hidden;
   z-index: 20;
 }
-html[data-theme="dark"] .reader { box-shadow: -14px 0 40px rgba(48, 59, 64, .08); }
+html[data-theme="light"] .reader { box-shadow: -14px 0 40px rgba(48, 59, 64, .08); }
 /* 阅读面板展开时挤压画布，而不是遮挡 */
 .app.has-reader { grid-template-columns: 348px minmax(0, 1fr) min(600px, 44vw); }
 .app.has-reader .reader {
