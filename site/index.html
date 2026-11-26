@@ -8,68 +8,61 @@
 </head>
 <body>
 <div class="app">
-  <header class="topbar">
-    <div class="brand">
-      <span class="mark">I</span>
-      <div>
-        <h1>Iris 安全知识库</h1>
-        <p id="stat-line">正在加载索引…</p>
+  <aside class="sidebar">
+    <header class="side-head">
+      <div class="brand">
+        <span class="mark">I</span>
+        <div>
+          <h1>Iris 安全知识库</h1>
+          <p id="stat-line">正在加载…</p>
+        </div>
       </div>
+      <button id="theme-toggle" type="button" class="icon-btn" title="切换主题">◐</button>
+    </header>
+
+    <div class="side-search">
+      <input id="q" type="search" placeholder="标题 / 别名 / 标签 / CVE" autocomplete="off" spellcheck="false">
+      <button id="clear" type="button" title="清空">×</button>
     </div>
-    <div class="actions">
-      <a class="ext" href="https://cppywh.github.io/" target="_blank" rel="noopener">个人站 ↗</a>
-      <a class="ext" href="https://github.com/cppywh" target="_blank" rel="noopener">GitHub ↗</a>
-      <button id="theme-toggle" type="button" title="切换主题">主题</button>
+
+    <div class="scope-row">
+      <span id="scope-label">范围：全部知识</span>
+      <button id="scope-reset" type="button" hidden>返回全库</button>
     </div>
-  </header>
 
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="searchbox">
-        <input id="q" type="search" placeholder="标题 / 别名 / 标签 / CVE" autocomplete="off" spellcheck="false">
-        <button id="clear" type="button" title="清空">×</button>
-      </div>
+    <div class="side-body">
+      <nav id="dir-tree" class="dir-tree" aria-label="知识目录"></nav>
+      <ol id="results" class="results" hidden></ol>
+    </div>
 
-      <div class="filters">
-        <label class="field">
-          <span>域</span>
-          <select id="domain"><option value="">全部</option></select>
-        </label>
-        <label class="field">
-          <span>状态</span>
-          <select id="status">
-            <option value="">全部</option>
-            <option value="verified">verified</option>
-            <option value="draft">draft</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>置信</span>
-          <select id="confidence">
-            <option value="">全部</option>
-            <option value="high">high</option>
-            <option value="medium">medium</option>
-            <option value="low">low</option>
-          </select>
-        </label>
-      </div>
+    <div id="side-detail" class="side-detail">
+      <p class="hint">单击枝干节点收窄范围，双击放大；点外圈星点打开卡片。</p>
+    </div>
+  </aside>
 
-      <div class="result-head">
-        <span id="result-count">—</span>
-        <button id="random" type="button">随机一张</button>
-      </div>
-      <ol id="results" class="results"></ol>
-    </aside>
+  <main class="stage">
+    <canvas id="world" aria-label="知识宇宙树"></canvas>
+    <div class="stage-tools">
+      <button id="zoom-in" type="button" title="放大">＋</button>
+      <button id="zoom-out" type="button" title="缩小">－</button>
+      <button id="fit" type="button" title="适应全图">适配</button>
+    </div>
+    <div id="hover-tip" class="hover-tip" hidden></div>
+  </main>
 
-    <main class="reader" id="reader">
-      <div class="empty">
-        <h2>选择一张卡片</h2>
-        <p>左侧搜索或筛选。卡片按单一场景组织，共七段：结论、原理、触发条件、利用步骤、PoC、变体与关联、检测与防御。</p>
-        <p class="hint">仅用于授权测试、教学与比赛。</p>
-      </div>
-    </main>
-  </div>
+  <aside id="reader" class="reader" hidden>
+    <header class="reader-head">
+      <span id="reader-crumb">场景手记</span>
+      <button id="reader-close" type="button" title="关闭">×</button>
+    </header>
+    <div class="reader-scroll">
+      <div id="reader-meta" class="reader-meta"></div>
+      <article id="article" class="article"></article>
+    </div>
+  </aside>
 </div>
+
+<script src="world.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

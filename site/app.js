@@ -3,28 +3,27 @@
 
   const state = {
     cards: [],
-    filtered: [],
-    activeId: null,
+    tree: null,
     query: '',
-    domain: '',
-    status: '',
-    confidence: '',
-    theme: localStorage.getItem('iris.theme') || '',
+    scope: '',
+    activeId: null,
+    theme: localStorage.getItem('iris.theme') || 'dark',
   };
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const lower = (v) => (Array.isArray(v) ? v.join(' ') : String(v || '')).toLowerCase();
+
+  let world = null;
 
   // ---------- 主题 ----------
   function applyTheme() {
-    const t = state.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.dataset.theme = t;
-    $('theme-toggle').textContent = t === 'dark' ? '浅色' : '深色';
+    document.documentElement.dataset.theme = state.theme;
+    $('theme-toggle').textContent = state.theme === 'dark' ? '☀' : '◐';
+    world?.setTheme(state.theme);
   }
 
   // ---------- 搜索 ----------
-  const lower = (v) => (Array.isArray(v) ? v.join(' ') : String(v || '')).toLowerCase();
-
   function prepare(cards) {
     for (const c of cards) {
       c._title = lower(c.title);
@@ -37,90 +36,173 @@
   function tokenize(q) {
     const raw = q.toLowerCase().trim();
     if (!raw) return [];
-    const parts = raw.split(/[\s,，、;；]+/).filter(Boolean);
     const out = new Set();
-    for (const p of parts) {
-      out.add(p);
-      if (/[\u4e00-\u9fff]/.test(p) && p.length > 2) {
-        for (let i = 0; i < p.length - 1; i++) out.add(p.slice(i, i + 2));
+    for (const part of raw.split(/[\s,，、;；]+/).filter(Boolean)) {
+      out.add(part);
+      if (/[\u4e00-\u9fff]/.test(part) && part.length > 2) {
+        for (let i = 0; i < part.length - 1; i++) out.add(part.slice(i, i + 2));
       }
     }
     return [...out];
   }
 
-  function scoreCard(c, tokens) {
-    let hit = 0, score = 0;
+  function score(c, tokens) {
+    let hit = 0, total = 0;
     for (const t of tokens) {
       let s = 0;
       if (c._title.includes(t)) s += 6;
       if (c._alias.includes(t)) s += 3;
       if (c._tag.includes(t)) s += 2;
       if (c._path.includes(t)) s += 1;
-      if (s) { hit++; score += s; }
+      if (s) { hit++; total += s; }
     }
-    return { hit, score };
+    return { hit, total };
   }
 
-  function run() {
+  function inScope(path) {
+    return !state.scope || path === state.scope || path.startsWith(state.scope + '/');
+  }
+
+  function runSearch() {
     const tokens = tokenize(state.query);
-    const pool = state.cards.filter((c) =>
-      (!state.domain || c.domain === state.domain) &&
-      (!state.status || c.status === state.status) &&
-      (!state.confidence || c.confidence === state.confidence)
-    );
+    const treeEl = $('dir-tree');
+    const listEl = $('results');
 
-    let ranked;
     if (!tokens.length) {
-      ranked = pool.map((c) => ({ c, score: 0, hit: 0 }));
-    } else {
-      ranked = [];
-      for (const c of pool) {
-        const r = scoreCard(c, tokens);
-        if (r.hit) ranked.push({ c, score: r.score, hit: r.hit });
-      }
-      const all = ranked.filter((r) => r.hit === tokens.length);
-      if (all.length) ranked = all;
-      ranked.sort((a, b) => b.score - a.score || b.hit - a.hit || a.c.title.length - b.c.title.length);
+      listEl.hidden = true;
+      treeEl.hidden = false;
+      return;
     }
 
-    state.filtered = ranked.map((r) => r.c);
-    renderResults(tokens.length ? ranked : null);
-  }
+    const pool = state.cards.filter((c) => inScope(c.path || ''));
+    let ranked = [];
+    for (const c of pool) {
+      const r = score(c, tokens);
+      if (r.hit) ranked.push({ c, ...r });
+    }
+    const full = ranked.filter((r) => r.hit === tokens.length);
+    if (full.length) ranked = full;
+    ranked.sort((a, b) => b.total - a.total || a.c.title.length - b.c.title.length);
 
-  function renderResults(ranked) {
-    const list = $('results');
-    const total = state.filtered.length;
-    $('result-count').textContent = total ? `${total} 张` : '无结果';
+    treeEl.hidden = true;
+    listEl.hidden = false;
 
-    const slice = state.filtered.slice(0, 200);
     const frag = document.createDocumentFragment();
+    const head = document.createElement('li');
+    head.className = 'result-head-row';
+    head.textContent = `${ranked.length} 张 · ${state.scope || '全部'}`;
+    frag.append(head);
 
-    slice.forEach((c, i) => {
+    for (const { c, total } of ranked.slice(0, 150)) {
       const li = document.createElement('li');
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'result' + (c.id === state.activeId ? ' active' : '');
       btn.dataset.id = c.id;
-      const rank = ranked ? `<b>${ranked[i].score}</b> · ` : '';
       btn.innerHTML =
         `<span class="t">${esc(c.title || c.id)}</span>` +
-        `<span class="m">${rank}${esc(c.domain || '')} · ${esc(c.status || '')} · ${esc(c.confidence || '')}` +
-        (c.affected_versions ? ` · ${esc(String(c.affected_versions).slice(0, 42))}` : '') +
-        `</span>`;
+        `<span class="m"><b>${total}</b> · ${esc(c.domain || '')} · ${esc(c.status || '')} · ${esc(c.confidence || '')}</span>`;
       btn.addEventListener('click', () => openCard(c));
       li.append(btn);
       frag.append(li);
-    });
-
-    if (!slice.length) {
+    }
+    if (!ranked.length) {
       const li = document.createElement('li');
-      li.className = 'result';
-      li.style.color = 'var(--muted)';
-      li.textContent = '没有匹配的卡片，换个关键词或放宽筛选。';
+      li.className = 'result-empty';
+      li.textContent = '没有匹配，换个词或放宽范围。';
       frag.append(li);
     }
+    listEl.replaceChildren(frag);
+  }
 
-    list.replaceChildren(frag);
+  // ---------- 侧栏目录 ----------
+  function renderTree() {
+    const host = $('dir-tree');
+    const frag = document.createDocumentFragment();
+
+    const makeRow = (node, depth) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'dir-node';
+
+      const row = document.createElement('div');
+      row.className = 'dir-row';
+      row.style.paddingLeft = `${6 + depth * 13}px`;
+      row.dataset.path = node.path;
+
+      const hasKids = node.children && node.children.length;
+      const caret = document.createElement('button');
+      caret.type = 'button';
+      caret.className = 'caret' + (hasKids ? '' : ' leaf');
+      caret.textContent = hasKids ? '▸' : '·';
+      caret.setAttribute('aria-label', hasKids ? '展开' : '无子目录');
+
+      const name = document.createElement('button');
+      name.type = 'button';
+      name.className = 'dir-name';
+      name.innerHTML = `<span>${esc(node.title || node.name)}</span><b>${node.count}</b>`;
+
+      row.append(caret, name);
+
+      const kids = document.createElement('div');
+      kids.className = 'dir-kids';
+      kids.hidden = true;
+
+      if (hasKids) {
+        caret.addEventListener('click', (e) => {
+          e.stopPropagation();
+          kids.hidden = !kids.hidden;
+          caret.textContent = kids.hidden ? '▸' : '▾';
+          caret.classList.toggle('open', !kids.hidden);
+        });
+        for (const child of node.children) kids.append(makeRow(child, depth + 1));
+      }
+
+      name.addEventListener('click', () => {
+        selectScope(node.path === '' ? '' : node.path, node);
+        if (hasKids && kids.hidden) {
+          kids.hidden = false;
+          caret.textContent = '▾';
+          caret.classList.add('open');
+        }
+      });
+
+      wrap.append(row, kids);
+      return wrap;
+    };
+
+    for (const child of state.tree.children || []) frag.append(makeRow(child, 0));
+    host.replaceChildren(frag);
+    markScope();
+  }
+
+  function markScope() {
+    for (const row of document.querySelectorAll('.dir-row')) {
+      row.classList.toggle('is-current', row.dataset.path === state.scope);
+    }
+  }
+
+  function selectScope(path, node) {
+    state.scope = path || '';
+    $('scope-label').textContent = `范围：${path ? (node?.title || node?.name || path) : '全部知识'}`;
+    $('scope-reset').hidden = !path;
+    world?.setScope(state.scope);
+    markScope();
+    if (state.query) runSearch();
+    renderSideDetail(node);
+  }
+
+  function renderSideDetail(node) {
+    const host = $('side-detail');
+    if (!node) {
+      host.innerHTML = '<p class="hint">单击枝干节点收窄范围，双击放大；点外圈星点打开卡片。</p>';
+      return;
+    }
+    const own = state.cards.filter((c) => c.path === node.path).length;
+    host.innerHTML = `
+      <div class="detail-title">${esc(node.title || node.name)}</div>
+      <div class="detail-meta">${node.count} 张卡 · 直属 ${own} 张</div>
+      <div class="detail-path">${esc(node.path || '/')}</div>
+    `;
   }
 
   // ---------- Markdown ----------
@@ -143,9 +225,7 @@
     const out = [];
     let para = [], list = null, i = 0;
 
-    const flushPara = () => {
-      if (para.length) { out.push(`<p>${inline(para.join(' '))}</p>`); para = []; }
-    };
+    const flushPara = () => { if (para.length) { out.push(`<p>${inline(para.join(' '))}</p>`); para = []; } };
     const flushList = () => {
       if (list) { out.push(`<${list.tag}>${list.items.map((x) => `<li>${inline(x)}</li>`).join('')}</${list.tag}>`); list = null; }
     };
@@ -173,7 +253,7 @@
         out.push(
           `<table><thead><tr>${head.map((c) => `<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>` +
           body.map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`).join('') +
-          `</tbody></table>`
+          '</tbody></table>'
         );
         continue;
       }
@@ -207,8 +287,8 @@
     return out.join('\n');
   }
 
-  // ---------- 卡片 ----------
   function stripFrontmatter(text) {
+    text = text.replace(/^\uFEFF/, '');
     if (text.startsWith('---')) {
       const end = text.indexOf('\n---', 3);
       if (end > 0) return text.slice(text.indexOf('\n', end + 1) + 1);
@@ -216,12 +296,17 @@
     return text;
   }
 
+  // ---------- 阅读 ----------
   async function openCard(card) {
     state.activeId = card.id;
     history.replaceState(null, '', '#' + encodeURIComponent(card.id));
-    document.querySelectorAll('.result').forEach((el) => el.classList.remove('active'));
+    world?.setSelected(card.id);
+    for (const el of document.querySelectorAll('.result')) el.classList.toggle('active', el.dataset.id === card.id);
 
     const reader = $('reader');
+    reader.hidden = false;
+    document.querySelector('.app').classList.add('has-reader');
+
     const chips = [
       `<span class="chip">${esc(card.domain || '—')}</span>`,
       `<span class="chip ${card.status === 'verified' ? 'ok' : 'warn'}">${esc(card.status || 'unknown')}</span>`,
@@ -231,66 +316,89 @@
       ...(card.tags || []).slice(0, 8).map((t) => `<span class="chip">${esc(t)}</span>`),
     ].join('');
 
-    reader.innerHTML = `
-      <div class="meta-top">
-        <h2>${esc(card.title || card.id)}</h2>
-        <div class="chips">${chips}</div>
-        <div class="pathline">${esc(card.path || '')} · <code>${esc(card.filename || '')}</code>` +
-        (card.updated ? ` · 更新 ${esc(card.updated)}` : '') +
-        (card.affected_versions ? `<br>适用版本：${esc(card.affected_versions)}` : '') +
-        `</div>
-      </div>
-      <article class="article"><p style="color:var(--muted)">正在读取…</p></article>`;
+    $('reader-crumb').textContent = card.path || '场景手记';
+    $('reader-meta').innerHTML = `
+      <h2>${esc(card.title || card.id)}</h2>
+      <div class="chips">${chips}</div>
+      <div class="pathline">${esc(card.path || '')} · <code>${esc(card.filename || '')}</code>` +
+      (card.updated ? ` · 更新 ${esc(card.updated)}` : '') +
+      (card.affected_versions ? `<br>适用版本：${esc(card.affected_versions)}` : '') +
+      `</div>`;
+
+    const article = $('article');
+    article.innerHTML = '<p class="loading">正在读取…</p>';
 
     try {
       const res = await fetch(card.url, { cache: 'no-store' });
       if (!res.ok) throw Error(`HTTP ${res.status}`);
-      const md = stripFrontmatter(await res.text());
-      reader.querySelector('.article').innerHTML = renderMarkdown(md);
-      reader.scrollTop = 0;
+      article.innerHTML = renderMarkdown(stripFrontmatter(await res.text()));
+      reader.querySelector('.reader-scroll').scrollTop = 0;
     } catch (err) {
-      reader.querySelector('.article').innerHTML =
-        `<p style="color:var(--warn)">正文读取失败：${esc(err.message)}。请通过 HTTP 服务打开本站（见 site/README）。</p>`;
+      article.innerHTML = `<p class="error">正文读取失败：${esc(err.message)}</p>`;
     }
+  }
 
-    const btn = [...document.querySelectorAll('.result')].find((b) => b.dataset.id === card.id);
-    if (btn) btn.classList.add('active');
+  function closeReader() {
+    $('reader').hidden = true;
+    document.querySelector('.app').classList.remove('has-reader');
+    state.activeId = null;
+    world?.setSelected(null);
+    history.replaceState(null, '', location.pathname + location.search);
+    for (const el of document.querySelectorAll('.result')) el.classList.remove('active');
   }
 
   // ---------- 启动 ----------
   async function boot() {
+    const params = new URLSearchParams(location.search);
+    const themeParam = params.get('theme');
+    if (themeParam === 'light' || themeParam === 'dark') state.theme = themeParam;
     applyTheme();
 
-    let data;
+    let cardsData, treeData;
     try {
-      const res = await fetch('data/cards.json', { cache: 'no-store' });
-      if (!res.ok) throw Error(`HTTP ${res.status}`);
-      data = await res.json();
+      const [a, b] = await Promise.all([
+        fetch('data/cards.json', { cache: 'no-store' }),
+        fetch('data/tree.json', { cache: 'no-store' }),
+      ]);
+      if (!a.ok || !b.ok) throw Error(`HTTP ${a.status}/${b.status}`);
+      cardsData = await a.json();
+      treeData = await b.json();
     } catch (err) {
       $('stat-line').textContent = `索引加载失败：${err.message}`;
       return;
     }
 
-    state.cards = data.cards;
+    state.cards = cardsData.cards;
+    state.tree = treeData;
     prepare(state.cards);
 
-    const stats = data.stats || {};
-    const doms = Object.entries(stats.domains || {});
-    $('stat-line').textContent =
-      `${stats.cards || state.cards.length} 张卡片 · ${doms.length} 个域 · 只读`;
+    const stats = cardsData.stats || {};
+    $('stat-line').textContent = `${stats.cards || state.cards.length} 张卡片 · ${(treeData.children || []).length} 个域`;
 
-    const sel = $('domain');
-    for (const [name, n] of doms) {
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = `${name} (${n})`;
-      sel.append(opt);
+    world = new window.WorldTree($('world'), {
+      onCard: openCard,
+      onNode: (node) => selectScope(node.path, node),
+      onBlank: () => {},
+      onHover: (item, kind) => {
+        const tip = $('hover-tip');
+        if (!item) { tip.hidden = true; return; }
+        tip.hidden = false;
+        tip.textContent = kind === 'card' ? item.title : `${item.title || item.name} · ${item.count}`;
+      },
+    });
+    world.load(treeData, state.cards);
+    world.setTheme(state.theme);
+
+    renderTree();
+
+    const scopeParam = params.get('scope');
+    if (scopeParam) {
+      const node = world.byPath.get(scopeParam);
+      if (node) selectScope(scopeParam, node);
     }
 
-    const q = new URLSearchParams(location.search).get('q');
-    if (q) { state.query = q; $('q').value = q; }
-
-    run();
+    const q = params.get('q');
+    if (q) { state.query = q; $('q').value = q; runSearch(); }
 
     const hash = decodeURIComponent(location.hash.slice(1));
     if (hash) {
@@ -304,25 +412,31 @@
   $('q').addEventListener('input', (e) => {
     clearTimeout(timer);
     const v = e.target.value;
-    timer = setTimeout(() => { state.query = v; run(); }, 120);
+    timer = setTimeout(() => { state.query = v; runSearch(); }, 120);
   });
 
-  $('clear').addEventListener('click', () => { $('q').value = ''; state.query = ''; run(); $('q').focus(); });
-  $('domain').addEventListener('change', (e) => { state.domain = e.target.value; run(); });
-  $('status').addEventListener('change', (e) => { state.status = e.target.value; run(); });
-  $('confidence').addEventListener('change', (e) => { state.confidence = e.target.value; run(); });
-
-  $('random').addEventListener('click', () => {
-    const pool = state.filtered.length ? state.filtered : state.cards;
-    if (!pool.length) return;
-    openCard(pool[Math.floor(Math.random() * pool.length)]);
+  $('clear').addEventListener('click', () => {
+    $('q').value = '';
+    state.query = '';
+    runSearch();
+    $('q').focus();
   });
+
+  $('scope-reset').addEventListener('click', () => selectScope('', null));
+  $('reader-close').addEventListener('click', closeReader);
+  $('zoom-in').addEventListener('click', () => world?.zoomAt(1.3, world.w / 2, world.h / 2));
+  $('zoom-out').addEventListener('click', () => world?.zoomAt(1 / 1.3, world.w / 2, world.h / 2));
+  $('fit').addEventListener('click', () => world?.fit());
 
   $('theme-toggle').addEventListener('click', () => {
-    const now = document.documentElement.dataset.theme;
-    state.theme = now === 'dark' ? 'light' : 'dark';
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
     localStorage.setItem('iris.theme', state.theme);
     applyTheme();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeReader();
+    if (e.key === '/' && document.activeElement !== $('q')) { e.preventDefault(); $('q').focus(); }
   });
 
   boot();
