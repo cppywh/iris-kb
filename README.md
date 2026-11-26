@@ -2,6 +2,9 @@
 
 个人安全知识库：目录树 + 场景卡片 + CVE 库，检索优先面向 AI 读者。
 
+- 站点：<https://cppywh.github.io/>
+- 作者：<https://github.com/cppywh>
+
 ## 来源与边界
 
 - 基于 [godownio/vuln-masterhub](https://github.com/godownio/vuln-masterhub)（commit `30d3e440`）改写，继承其 7,060 张卡片与 13 域 taxonomy。
