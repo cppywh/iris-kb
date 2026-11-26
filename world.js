@@ -581,7 +581,7 @@
       const fade = clamp((this.grow - 0.55) / 0.45, 0, 1);
       if (fade <= 0 || s < 0.14) return;
 
-      const radius = clamp(1.3 + s * 1.7, 1.0, 4.2);
+      const radius = clamp(1.35 / Math.max(0.18, s), 0.22, 11);
       const groups = new Map();
 
       for (const c of this.cards) {
