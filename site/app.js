@@ -68,11 +68,14 @@
     const treeEl = $('dir-tree');
     const listEl = $('results');
 
+    const tools = $('dir-tools');
     if (!tokens.length) {
       listEl.hidden = true;
       treeEl.hidden = false;
+      if (tools) tools.hidden = false;
       return;
     }
+    if (tools) tools.hidden = true;
 
     const pool = state.cards.filter((c) => inScope(c.path || ''));
     let ranked = [];
@@ -173,6 +176,20 @@
     for (const child of state.tree.children || []) frag.append(makeRow(child, 0));
     host.replaceChildren(frag);
     markScope();
+
+    const total = (function count(n) {
+      return 1 + (n.children || []).reduce((sum, c) => sum + count(c), 0);
+    })(state.tree) - 1;
+    $('dir-count').textContent = `${total} 个目录`;
+
+    $('expand-all').onclick = () => {
+      for (const kids of document.querySelectorAll('.dir-kids')) kids.hidden = false;
+      for (const caret of document.querySelectorAll('.caret:not(.leaf)')) { caret.textContent = '−'; caret.classList.add('open'); }
+    };
+    $('collapse-all').onclick = () => {
+      for (const kids of document.querySelectorAll('.dir-kids')) kids.hidden = true;
+      for (const caret of document.querySelectorAll('.caret:not(.leaf)')) { caret.textContent = '+'; caret.classList.remove('open'); }
+    };
   }
 
   function markScope() {
@@ -382,14 +399,29 @@
 
     world = new window.WorldTree($('world'), {
       still: params.get('still') === '1',
+      debug: params.get('debug') === '1',
       onCard: openCard,
       onNode: (node) => selectScope(node.path, node),
       onBlank: () => {},
       onHover: (item, kind) => {
         const tip = $('hover-tip');
-        if (!item) { tip.hidden = true; return; }
+        if (!item) {
+          tip.hidden = true;
+          renderSideDetail(state.scope ? world.byPath.get(state.scope) : null);
+          return;
+        }
         tip.hidden = false;
         tip.textContent = kind === 'card' ? item.title : `${item.title || item.name} · ${item.count}`;
+
+        const host = $('side-detail');
+        if (kind === 'card') {
+          host.innerHTML = `
+            <div class="detail-title">${esc(item.title || item.id)}</div>
+            <div class="detail-meta">${esc(item.domain || '')} · ${esc(item.status || '')} · ${esc(item.confidence || '')}</div>
+            <div class="detail-path">${esc(item.path || '')}</div>`;
+        } else {
+          renderSideDetail(item);
+        }
       },
     });
     world.load(treeData, state.cards);

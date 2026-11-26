@@ -174,7 +174,7 @@
           c.pa = node.a;
           c.pr = node.r;
           c.domain = c.domain || node.path.split('/')[0];
-          c.r = node.r + CARD_BASE + c._h * CARD_JITTER + (node.depth > 2 ? 16 : 0);
+          c.r = node.r + 60 + c._h * 104 + (node.depth > 2 ? 16 : 0);
           c.x = Math.cos(c.a) * c.r;
           c.y = Math.sin(c.a) * c.r;
         });
@@ -461,19 +461,6 @@
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      // 四个方位短标注
-      const dirs = [['N', -Math.PI / 2], ['E', 0], ['S', Math.PI / 2], ['W', Math.PI]];
-      ctx.save();
-      ctx.scale(1 / s, 1 / s);
-      ctx.font = '9px Georgia, "Noto Serif CJK SC", serif';
-      ctx.fillStyle = dark ? 'rgba(140,170,180,.42)' : 'rgba(66,103,121,.42)';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.globalAlpha = fade;
-      for (const [ch, a] of dirs) {
-        const rr = (outer + 14) * s;
-        ctx.fillText(ch, Math.cos(a) * rr, Math.sin(a) * rr);
-      }
       ctx.restore();
       ctx.globalAlpha = 1;
     }
@@ -527,7 +514,7 @@
         const mx = Math.cos(node.a) * midR;
         const my = Math.sin(node.a) * midR;
 
-        const baseW = clamp(4.2 - node.depth * 0.85, 0.6, 4.2);
+        const baseW = clamp(4.8 - node.depth * 0.8, 1.0, 4.8);
 
         // 底影：稍宽一点、极淡，制造压痕
         ctx.beginPath();
@@ -557,7 +544,7 @@
       const fade = clamp((this.grow - 0.55) / 0.45, 0, 1);
       if (fade <= 0 || s < 0.14) return;
 
-      const radius = clamp(1.0 + s * 1.5, 0.85, 3.6);
+      const radius = clamp(1.15 + s * 1.55, 0.95, 3.9);
       const groups = new Map();
 
       for (const c of this.cards) {
@@ -608,8 +595,8 @@
 
     _nodeRadius(node) {
       if (node.depth === 0) return 13;
-      if (node.depth === 1) return clamp(3.6 + Math.sqrt(node.count) * 0.2, 4, 12);
-      return clamp(3.4 - node.depth * 0.5, 1.6, 3.4);
+      if (node.depth === 1) return clamp(4.2 + Math.sqrt(node.count) * 0.22, 5, 13);
+      return clamp(4.7 - node.depth * 0.55, 2.3, 4.7);
     }
 
     _drawNodes(dark) {
@@ -730,35 +717,30 @@
           continue;
         }
 
-        // 一级域：统一标注在外圈环上，沿切向错开
-        const lblR = 292 * grow;
+        // 一级域：贴在节点外侧，沿切向错开，不画长引线
+        const lblR = (node.r + 20) * grow;
         let placed = null;
-        for (let k = 0; k < 18; k++) {
-          const step = Math.ceil(k / 2) * 0.05 * (k % 2 ? 1 : -1);
+        for (let k = 0; k < 20; k++) {
+          const step = Math.ceil(k / 2) * 0.055 * (k % 2 ? 1 : -1);
           const aa = node.a + step;
           const px = Math.cos(aa) * lblR;
           const py = Math.sin(aa) * lblR;
-          const align = Math.cos(aa) >= 0 ? 'left' : 'right';
-          const off = align === 'left' ? 7 : -7;
-          const box = { x: align === 'left' ? px + off : px + off - w, y: py - h / 2, w, h };
-          if (!hits(box)) { placed = { px, py, align, off, box }; break; }
+          const box = { x: px - w / 2, y: py - h / 2, w, h };
+          if (!hits(box)) { placed = { px, py, box }; break; }
         }
-        if (placed) {
-          ctx.textAlign = placed.align;
-          ctx.fillText(label, placed.px + placed.off, placed.py);
-          taken.push(placed.box);
-
-          // 引线：节点到标注
+        const bx = placed ? placed.px : sx;
+        const by = placed ? placed.py : sy - rb - size;
+        if (placed && Math.hypot(bx - sx, by - sy) > rb + size * 1.4) {
           ctx.beginPath();
-          ctx.moveTo(sx + Math.cos(node.a) * (rb + 2), sy + Math.sin(node.a) * (rb + 2));
-          ctx.lineTo(placed.px, placed.py);
-          ctx.strokeStyle = dark ? 'rgba(130,160,170,.22)' : 'rgba(66,103,121,.2)';
-          ctx.lineWidth = 0.8;
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(bx, by);
+          ctx.strokeStyle = dark ? 'rgba(130,160,170,.28)' : 'rgba(66,103,121,.24)';
+          ctx.lineWidth = 0.7;
           ctx.stroke();
-
-          ctx.font = `300 ${size * 0.72}px "Segoe UI",sans-serif`;
-          ctx.fillStyle = dark ? 'rgba(150,168,174,.45)' : 'rgba(120,116,104,.5)';
         }
+        ctx.textAlign = 'center';
+        ctx.fillText(label, bx, by);
+        taken.push({ x: bx - w / 2, y: by - h / 2, w, h });
         order++;
       }
 
@@ -772,7 +754,18 @@
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = dark ? 'rgba(140,160,168,.5)' : 'rgba(116,112,100,.62)';
-      ctx.fillText(`${(this.view.s * 100).toFixed(0)}%`, this.w - 20, this.h - 24);
+      if (this.opts.debug) {
+        ctx.textAlign = 'left';
+        ctx.font = '12px monospace';
+        ctx.fillText(
+          `w=${Math.round(this.w)} h=${Math.round(this.h)} s=${this.view.s.toFixed(3)} dpr=${this.dpr} fit=${Math.round(this._fitW || 0)}x${Math.round(this._fitH || 0)}`,
+          22,
+          this.h - 24
+        );
+      } else {
+        ctx.textAlign = 'right';
+        ctx.fillText(`${(this.view.s * 100).toFixed(0)}%`, this.w - 20, this.h - 24);
+      }
       ctx.restore();
     }
   }
