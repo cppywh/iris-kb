@@ -3,5 +3,7 @@ hugo-site/resources/
 __pycache__/
 hugo-site/.hugo_build.lock
 
-# 索引数据库：本地生成，不进版本库
-/data/
+# 本地索引：生成物，不进版本库
+/data/index.json
+/data/kb.sqlite
+/data/*.lock

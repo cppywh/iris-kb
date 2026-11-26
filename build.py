@@ -5,9 +5,9 @@ import json
 from collections import Counter
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "data" / "index.json"
-OUT = Path(__file__).resolve().parent / "data"
+OUT = ROOT / "data" / "web"
 
 FIELDS = (
     "id", "title", "path", "filename", "domain", "technique",
@@ -68,7 +68,7 @@ def main() -> None:
     cards = []
     for c in raw["cards"]:
         item = {k: c.get(k) for k in FIELDS if c.get(k) not in (None, "", [], {})}
-        item["url"] = f"../knowledge/{c['path']}/{c['filename']}"
+        item["url"] = f"knowledge/{c['path']}/{c['filename']}"
         cards.append(item)
 
     domains = Counter(c["domain"] for c in cards if c.get("domain"))

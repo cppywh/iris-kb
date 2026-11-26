@@ -211,7 +211,9 @@
       for (const n of this.nodes) if (n.r > extent) extent = n.r;
       for (const c of this.cards) if (c.r > extent) extent = c.r;
       extent += 70;
-      const s = Math.min(this.w, this.h) / (extent * 2) / padding;
+      let s = Math.min(this.w, this.h) / (extent * 2) / padding;
+      const half = Math.min(this.w, this.h) / 2;
+      while (extent * s + 96 > half && s > 0.05) s *= 0.97;
       this.view = { s: clamp(s, 0.05, 4), tx: this.w / 2, ty: this.h / 2 };
       this._fitted = true;
       this._extent = extent;
@@ -763,8 +765,8 @@
           const step = Math.ceil(k / 2) * 0.05 * (k % 2 ? 1 : -1);
           const aa = node.a + step;
           const treeR = (this._extent || 1000) * s;
-          const rx = Math.min(this.w * 0.44, treeR + 32);
-          const ry = Math.min(this.h * 0.44, treeR + 32);
+          const rx = treeR + 34;
+          const ry = treeR + 34;
           const px = Math.cos(aa) * rx;
           const py = Math.sin(aa) * ry;
           const align = Math.cos(aa) >= 0 ? 'left' : 'right';
@@ -792,8 +794,11 @@
         } else {
           ctx.rect(tbox.x - padX, tbox.y - padY, tbox.w + padX * 2, tbox.h + padY * 2);
         }
-        ctx.fillStyle = dark ? 'rgba(2,4,9,.88)' : 'rgba(250,249,246,.9)';
+        ctx.fillStyle = dark ? 'rgba(6,12,20,.62)' : 'rgba(252,251,247,.78)';
         ctx.fill();
+        ctx.strokeStyle = dark ? 'rgba(126,200,232,.14)' : 'rgba(66,103,121,.12)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
 
         ctx.textAlign = placed ? placed.align : 'center';
         ctx.fillStyle = active

@@ -3,23 +3,81 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Iris 安全知识库</title>
-<meta http-equiv="refresh" content="0; url=./site/">
-<link rel="canonical" href="./site/">
-<style>
-  html, body { margin: 0; height: 100%; background: #faf9f6; color: #303b40;
-    font: 15px/1.8 "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
-  main { max-width: 520px; margin: 18vh auto; padding: 0 24px; }
-  h1 { font: italic 34px/1.3 Georgia, "Noto Serif CJK SC", serif; color: #426779; margin: 0 0 10px; }
-  p { color: #747a79; font-size: 13px; }
-  a { color: #426779; }
-</style>
+<title>Iris 安全知识库 · 7060 张场景卡片</title>
+<meta name="description" content="个人安全知识库：7060 张单场景卡片，覆盖 Web、渗透、CTF、代码分析、二进制、AI 安全等 13 个域。径向星图浏览，支持关键词检索与范围收窄。">
+<meta name="author" content="cppywh">
+<meta name="theme-color" content="#04060b">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Iris 安全知识库">
+<meta property="og:description" content="7060 张安全场景卡片，13 个域，径向星图浏览。">
+<meta property="og:url" content="https://cppywh.github.io/iris-kb/">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<main>
-  <h1>Iris 安全知识库</h1>
-  <p>正在进入检索界面。若没有自动跳转，请点 <a href="./site/">这里</a>。</p>
-  <p>内容仅用于授权测试、教学与比赛。</p>
-</main>
+<div class="app">
+  <aside class="sidebar">
+    <header class="side-head">
+      <div class="brand">
+        <span class="mark">I</span>
+        <div>
+          <h1>Iris 安全知识库</h1>
+          <p id="stat-line">正在加载…</p>
+        </div>
+      </div>
+      <button id="theme-toggle" type="button" class="icon-btn" title="切换主题">◐</button>
+    </header>
+
+    <div class="side-search">
+      <input id="q" type="search" placeholder="标题 / 别名 / 标签 / CVE" autocomplete="off" spellcheck="false">
+      <button id="clear" type="button" title="清空">×</button>
+    </div>
+
+    <div class="scope-row">
+      <span id="scope-label">范围：全部知识</span>
+      <button id="scope-reset" type="button" hidden>返回全库</button>
+    </div>
+
+    <div class="side-body">
+      <div id="dir-tools" class="dir-tools">
+        <span id="dir-count">目录</span>
+        <span class="dir-tools-actions">
+          <button id="expand-all" type="button">展开</button>
+          <button id="collapse-all" type="button">收起</button>
+        </span>
+      </div>
+      <nav id="dir-tree" class="dir-tree" aria-label="知识目录"></nav>
+      <ol id="results" class="results" hidden></ol>
+    </div>
+
+    <div id="side-detail" class="side-detail">
+      <p class="hint">单击枝干节点收窄范围，双击放大；点外圈星点打开卡片。</p>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <canvas id="world" aria-label="知识宇宙树"></canvas>
+    <div class="stage-tools">
+      <button id="zoom-in" type="button" title="放大">＋</button>
+      <button id="zoom-out" type="button" title="缩小">－</button>
+      <button id="fit" type="button" title="适应全图">适配</button>
+    </div>
+    <div id="hover-tip" class="hover-tip" hidden></div>
+  </main>
+
+  <aside id="reader" class="reader" hidden>
+    <header class="reader-head">
+      <span id="reader-crumb">场景手记</span>
+      <button id="reader-close" type="button" title="关闭">×</button>
+    </header>
+    <div class="reader-scroll" tabindex="0">
+      <div id="reader-meta" class="reader-meta"></div>
+      <article id="article" class="article"></article>
+    </div>
+  </aside>
+</div>
+
+<script src="world.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

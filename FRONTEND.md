@@ -5,11 +5,11 @@
 ## 启动
 
 ```bash
-python site/serve.py 8000
-# http://127.0.0.1:8000/site/
+python serve.py 8000
+# http://127.0.0.1:8000/
 ```
 
-服务根目录是 `iris-kb/`，前端直接读取 `../knowledge/` 下的卡片原文。必须通过 HTTP 打开，`file://` 下浏览器会拦截 `fetch`。
+前端位于仓库根目录，直接读取 `knowledge/` 下的卡片原文。必须通过 HTTP 打开，`file://` 下浏览器会拦截 `fetch`。
 
 ## 形态
 
@@ -40,11 +40,11 @@ python site/serve.py 8000
 
 ```bash
 python tools/kb.py index        # 更新源索引 data/index.json
-python site/build.py            # 生成 site/data/cards.json 与 tree.json
+python build.py                 # 生成 data/web/*.json
 ```
 
-- `cards.json`：卡片元数据，去掉本机绝对路径，约 5.8 MB
-- `tree.json`：目录树骨架，167 个节点，约 10 KB
+- `/data/web/cards.json`：卡片元数据，去掉本机绝对路径，约 5.8 MB
+- `/data/web/tree.json`：目录树骨架，167 个节点，约 10 KB
 
 ## 与上游的差异
 
@@ -65,5 +65,6 @@ python site/build.py            # 生成 site/data/cards.json 与 tree.json
 | `styles.css` | 主题、布局、markdown 样式 |
 | `world.js` | 径向布局、Canvas 渲染、缩放平移、命中测试 |
 | `app.js` | 搜索、目录树、阅读面板、Markdown 渲染 |
-| `build.py` | 生成 `data/cards.json` 与 `data/tree.json` |
+| `build.py` | 生成 `data/web/cards.json` 与 `tree.json` |
 | `serve.py` | 本地 HTTP 服务 |
+| `favicon.svg` | 站点图标 |

@@ -379,8 +379,8 @@
     let cardsData, treeData;
     try {
       const [a, b] = await Promise.all([
-        fetch('data/cards.json', { cache: 'no-store' }),
-        fetch('data/tree.json', { cache: 'no-store' }),
+        fetch('data/web/cards.json', { cache: 'no-store' }),
+        fetch('data/web/tree.json', { cache: 'no-store' }),
       ]);
       if (!a.ok || !b.ok) throw Error(`HTTP ${a.status}/${b.status}`);
       cardsData = await a.json();
