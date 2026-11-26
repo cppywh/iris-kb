@@ -7,7 +7,7 @@
     query: '',
     scope: '',
     activeId: null,
-    theme: localStorage.getItem('iris.theme') || 'dark',
+    theme: localStorage.getItem('iris.theme') || 'light',
   };
 
   const $ = (id) => document.getElementById(id);
@@ -133,7 +133,7 @@
       const caret = document.createElement('button');
       caret.type = 'button';
       caret.className = 'caret' + (hasKids ? '' : ' leaf');
-      caret.textContent = hasKids ? '▸' : '·';
+      caret.textContent = hasKids ? '+' : '·';
       caret.setAttribute('aria-label', hasKids ? '展开' : '无子目录');
 
       const name = document.createElement('button');
@@ -151,7 +151,7 @@
         caret.addEventListener('click', (e) => {
           e.stopPropagation();
           kids.hidden = !kids.hidden;
-          caret.textContent = kids.hidden ? '▸' : '▾';
+          caret.textContent = kids.hidden ? '+' : '−';
           caret.classList.toggle('open', !kids.hidden);
         });
         for (const child of node.children) kids.append(makeRow(child, depth + 1));
@@ -161,7 +161,7 @@
         selectScope(node.path === '' ? '' : node.path, node);
         if (hasKids && kids.hidden) {
           kids.hidden = false;
-          caret.textContent = '▾';
+          caret.textContent = '−';
           caret.classList.add('open');
         }
       });
@@ -376,6 +376,7 @@
     $('stat-line').textContent = `${stats.cards || state.cards.length} 张卡片 · ${(treeData.children || []).length} 个域`;
 
     world = new window.WorldTree($('world'), {
+      still: params.get('still') === '1',
       onCard: openCard,
       onNode: (node) => selectScope(node.path, node),
       onBlank: () => {},
@@ -387,6 +388,9 @@
       },
     });
     world.load(treeData, state.cards);
+    if (params.get('debug') === '1') {
+      document.title = `w=${world.w} h=${world.h} s=${world.view.s.toFixed(3)} tx=${world.view.tx.toFixed(0)} ty=${world.view.ty.toFixed(0)} cards=${world.cards.length}`;
+    }
     world.setTheme(state.theme);
 
     renderTree();
